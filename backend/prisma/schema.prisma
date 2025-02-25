@@ -1,0 +1,95 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+model User {
+  id             String         @id @default(uuid())
+  name           String
+  email          String         @unique
+  password       String
+  reputationPoints Int
+  role           String
+  communities    UserCommunity[]
+  posts          Post[]
+  events         UserEvent[]
+  opportunities  Opportunity[]  // 🔹 هذا الحقل هو العكس لعلاقة postedBy في Opportunity
+  ownedCommunities Community[] @relation("CommunityOwner")
+  organizedEvents Event[] @relation("EventOrganizer")
+}
+
+model Community {
+  id          String   @id @default(uuid())
+  title       String
+  description String
+  rules       String
+  ownerId     String
+  owner       User     @relation(fields: [ownerId], references: [id], name: "CommunityOwner")
+
+  members     UserCommunity[]
+  posts       Post[]
+  events      Event[]
+  opportunities Opportunity[]
+}
+
+model UserCommunity {
+  userId      String
+  communityId String
+  joinedAt    DateTime @default(now())
+
+  user       User     @relation(fields: [userId], references: [id])
+  community  Community @relation(fields: [communityId], references: [id])
+
+  @@id([userId, communityId])
+}
+
+model Post {
+  id          String   @id @default(uuid())
+  title       String
+  content     String
+  authorId    String
+  author      User     @relation(fields: [authorId], references: [id])
+  communityId String
+  community   Community @relation(fields: [communityId], references: [id])
+  type        String
+  createdAt   DateTime @default(now())
+}
+
+model Event {
+  id          String   @id @default(uuid())
+  title       String
+  description String
+  date        DateTime
+  location    String?
+  isOnline    Boolean
+  organizerId String
+  organizer   User     @relation(fields: [organizerId], references: [id], name: "EventOrganizer")
+  communityId String
+  community   Community @relation(fields: [communityId], references: [id])
+
+  attendees   UserEvent[]
+}
+
+model UserEvent {
+  userId  String
+  eventId String
+  RSVPStatus String
+
+  user  User  @relation(fields: [userId], references: [id])
+  event Event @relation(fields: [eventId], references: [id])
+
+  @@id([userId, eventId])
+}
+model Opportunity {
+  id          String   @id @default(uuid())
+  title       String
+  description String
+  type        String  // "Job", "Internship", "Collaboration"
+  postedBy    String
+  user        User     @relation(fields: [postedBy], references: [id])
+  communityId String
+  community   Community @relation(fields: [communityId], references: [id])
+}
